@@ -119,7 +119,7 @@ def fasta_extractor(input_file, output_folder):
                 header = header_extractor(line)
                 # Making out file name and new fasta file header
                 outfile_name = (
-                        folder_name + '-' + header[0] + '_' +
+                        folder_name + header[0] + '_' +
                         header[1] + ".fasta")
                 outfile_header = '>' + outfile_name + '\n'
                 # Opening out file
@@ -135,7 +135,7 @@ def fasta_extractor(input_file, output_folder):
                 header = header_extractor(line)
                 # Making out file name and new fasta file header
                 outfile_name = (
-                        folder_name + '-' + header[0] + '_' +
+                        folder_name + header[0] + '_' +
                         header[1] + ".fasta")
                 outfile_header = '>' + outfile_name + '\n'
                 # Opening out file
