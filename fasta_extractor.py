@@ -59,24 +59,29 @@ def user_input():
                     assembly.fasta
                     SW0002_n2770_L1000_3800000_linear
                     SW0002_n2770_L1000_125000_circular
+
+            Usage example:
+            python3 fasta_extractor -n assembly.fasta -d ~/Documents/results
                 """))
-    parser.add_argument('-i', '--input', help="name of input fasta file")
+    parser.add_argument('-n', '--name', help="name of input fasta file")
     parser.add_argument('-d', '--directory', help="path to input directory")
     args = parser.parse_args()
+    if (args.name is None) and (args.directory is None):
+        parser.exit(1, message=textwrap.dedent("""\
+                error: missing arguments, you did not provide name of input
+                fasta file nor path to input folder\n"""))
+    # Checking if user provided mandatory arguments
+    if (vars(args)).get("name") is None:
+        parser.exit(1, message=textwrap.dedent("""\
+                error: missing argument, you did not provide name of input
+                fasta file\n"""))
+    if (vars(args)).get("directory") is None:
+        parser.exit(1, message=textwrap.dedent("""\
+                error: missing argument, you did not provide path to input
+                folder\n"""))
     # Checking if input folder exists
     if not os.path.exists(args.directory):
-        print("error: directory does not exits\n")
-        parser.print_help()
-        sys.exit(1)
-    # Checking if user provided mandatory arguments
-    if (vars(args)).get("input") is None:
-        print("error: you did not provide input file\n")
-        parser.print_help()
-        sys.exit(1)
-    if (vars(args)).get("directory") is None:
-        print("error: you did not provide output folder\n")
-        parser.print_help()
-        sys.exit(1)
+        parser.exit(1, message="error: directory does not exits\n")
 
     return args
 
@@ -105,9 +110,11 @@ def header_extractor(line):
         if "length" in info:
             info = info.split("=")
             length = info[1]
+            length = length.replace('\n', '')
         elif "circular" in info:
             info = info.split("=")
             topology = info[0]
+            topology = topology.split('\n', '')
         else:
             continue
     if topology == "":
@@ -116,23 +123,24 @@ def header_extractor(line):
     return (length, topology)
 
 
-def fasta_extractor(input_file, output_folder):
+def fasta_extractor(input_file):
     """
     Parse an input fasta file to extract one or more fasta sequences into
-    independent files.
+    independent files. The new fasta files are outputed in the same directory
+    where the input_file is located.
 
     Parameters
     ----------
     input_file : string
-        File to be opened for parsing
-
-    output_folder : string
-        Path to folder where the resulting fasta files are going to be output
+        Path to file to be opened for parsing
     """
-    # Getting path to input file
+    # Getting absolute path to input file
     path_infile = os.path.abspath(input_file)
+    print("input file: " + path_infile)
     # Getting path to folder containing input file
     path_infolder = os.path.dirname(path_infile)
+    # Getting path to output folder
+    output_folder = path_infolder
     # Getting name of folder containing input file
     folder_name = os.path.basename(path_infolder)
     # Replacing dash at the end of folder name with underscore
@@ -141,8 +149,6 @@ def fasta_extractor(input_file, output_folder):
         folder_name = folder_name + '_'
     elif folder_name[len(folder_name) - 1:] != '_':
         folder_name = folder_name + '_'
-    # Getting absolute path to output folder
-    output_folder = os.path.abspath(output_folder)
     # Opening input file
     with open(input_file, "r") as infile:
         # counter of fasta sequence
@@ -153,13 +159,15 @@ def fasta_extractor(input_file, output_folder):
             if line[0] == '>' and counter == 0:
                 # Get information from header
                 header = header_extractor(line)
+                print(header)
                 # Making out file name and new fasta file header
                 outfile_name = (
                         folder_name + header[0] + '_' +
-                        header[1] + ".fasta")
+                        header[1])
                 outfile_header = '>' + outfile_name + '\n'
                 # Opening out file
-                outfile = open(output_folder + '/' + outfile_name, 'w')
+                outfile = open(output_folder + '/' + outfile_name + ".fasta",
+                               'w')
                 # Copying header into outfile
                 outfile.write(outfile_header)
                 # increase counter
@@ -169,25 +177,28 @@ def fasta_extractor(input_file, output_folder):
                 outfile.close()
                 # Getting information of new header
                 header = header_extractor(line)
+                print(header)
                 # Making out file name and new fasta file header
                 outfile_name = (
                         folder_name + header[0] + '_' +
-                        header[1] + ".fasta")
+                        header[1])
                 outfile_header = '>' + outfile_name + '\n'
                 # Opening out file
-                outfile = open(output_folder + '/' + outfile_name, 'w')
+                outfile = open(output_folder + '/' + outfile_name + ".fasta",
+                               'w')
                 # Copying header into outfile
                 outfile.write(outfile_header)
                 # increase counter
                 counter += 1
-            else:
+            elif line[0] != '>' and counter > 0:
                 # Concatenate line into outfile
                 outfile.write(line)
-        # Closing last outfile
-        outfile.close()
+        # Closing last outfile only if a file was created
+        if counter > 0:
+            outfile.close()
 
 
-def get_file_and_dir_names(input_file, input_folder):
+def get_file_paths(input_file, input_folder):
     """
     Iterates over subdirectories of a given directory (input_folder) looking
     for files with the same name (input_file). For the purpose of this script,
@@ -196,55 +207,63 @@ def get_file_and_dir_names(input_file, input_folder):
 
     Parameters
     ----------
-    input_folder : str
-        Name of the directory to analyze.
     input_file : str
         Name of the file which path is needed
+    input_folder : str
+        Path to the directory to analyze.
 
     Returns
     -------
     tuple
-        Index 0 has a list of the addresses.
-        Index 1 has a list of the directories' names.
+        Index 0, list of paths to input_file.
+        Index 1, list of directories' names carring input_file.
     """
-    # List of files' addresses
+    # List of paths to input_file
     file_addresses = []
-    # List of directory's names
+    # List of directories's names carrying input_file
     dir_names = []
     # Get all files' and folders' names in the indicated directory
     files_and_folders = os.listdir(input_folder)
     # Iterate over all the files and folders contained in input_folder
-    for filename in files_and_folders:
+    for folder in files_and_folders:
         # Check if the currect object is a folder or not
-        if os.path.isdir(os.path.join(input_folder, filename)):
+        if os.path.isdir(os.path.join(input_folder, folder)):
             # Checking if folder contains input_file
             if not os.path.exists(
-                    os.path.join(input_folder, filename, input_file)):
-                print("folder " + filename + " does not have " + input_file)
+                    os.path.join(input_folder, folder, input_file)):
+                print("folder " + folder + " does not have " + input_file)
                 continue
             # Getting folder's name
-            dir_names.append(filename)
+            dir_names.append(folder)
             # Getting path of input_file, i.e. assembly.fasta
             file_addresses.append(
-                    os.path.join(input_folder, filename, input_file))
+                    os.path.join(input_folder, folder, input_file))
     return (file_addresses, dir_names)
 
 
-def parse_folders(input_file, input_folder):
+def screen_subfolders(input_file, input_folder):
     """
-    Explain function
+    Screens primary subfolders of input_folder to extract fasta sequences
+    contained in a fasta file (input_file). For more information about the
+    extraction of fasta sequences from a fasta file read the documentation of
+    the fasta_extractor function.
+
+    Parameters
+    ----------
+    input_file : str
+        Name of fasta file to analyze.
+    input_folder : str
+        Path to input folder containing the primary subfolders to analyze
     """
     # Get list of paths to the assembly.fasta files and list of folder's name
-    input_information = get_file_and_dir_names(input_file, input_folder)
+    input_information = get_file_paths(input_file, input_folder)
     # Get list of path to fasta files
     input_file_list = input_information[0]
-    # Get list of folder names
-    input_folder_list = input_information[1]
     # Number of fasta files to analyze
     number_files = len(input_file_list)
     # Loop over the list of paths to extract fasta sequences
     for i in range(number_files):
-        fasta_extractor(input_file_list[i], input_folder_list[i])
+        fasta_extractor(input_file_list[i])
 
 
 def main():
@@ -253,12 +272,14 @@ def main():
     """
     # Checking usage
     args = user_input()
-    # Getting input file
-    input_file = args.input
-    # Getting output directory
+    # Getting fasta file name
+    file_name = args.name
+    # Getting path to input directory
     input_folder = args.directory
-    # extracting fasta sequences from fasta files
-    parse_folders(input_file, input_folder)
+    # Screen primary subfolders of input_folder to extract fasta sequences from
+    # a fasta file (file_name).
+    screen_subfolders(file_name, input_folder)
+    # If everything went OK print Done
     print("Done!")
     sys.exit(0)
 
