@@ -114,7 +114,7 @@ def header_extractor(line):
         elif "circular" in info:
             info = info.split("=")
             topology = info[0]
-            topology = topology.split('\n', '')
+            topology = topology.replace('\n', '')
         else:
             continue
     if topology == "":
@@ -159,7 +159,6 @@ def fasta_extractor(input_file):
             if line[0] == '>' and counter == 0:
                 # Get information from header
                 header = header_extractor(line)
-                print(header)
                 # Making out file name and new fasta file header
                 outfile_name = (
                         folder_name + header[0] + '_' +
@@ -177,7 +176,6 @@ def fasta_extractor(input_file):
                 outfile.close()
                 # Getting information of new header
                 header = header_extractor(line)
-                print(header)
                 # Making out file name and new fasta file header
                 outfile_name = (
                         folder_name + header[0] + '_' +
