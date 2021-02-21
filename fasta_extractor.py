@@ -1,8 +1,11 @@
-#!/opt/anaconda3/bin/python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """
 Created on Wed 10, 2021
 @author: ivanmugu
 """
+
 import sys
 import os
 import argparse
@@ -61,7 +64,7 @@ def user_input():
                     SW0002_n2770_L1000_125000_circular
 
             Usage example:
-            python3 fasta_extractor -n assembly.fasta -d ~/Documents/results
+            python3 fasta_extractor.py -n assembly.fasta -d ~/Documents/results
                 """))
     parser.add_argument('-n', '--name', help="name of input fasta file")
     parser.add_argument('-d', '--directory', help="path to input directory")
@@ -136,7 +139,6 @@ def fasta_extractor(input_file):
     """
     # Getting absolute path to input file
     path_infile = os.path.abspath(input_file)
-    print("input file: " + path_infile)
     # Getting path to folder containing input file
     path_infolder = os.path.dirname(path_infile)
     # Getting path to output folder
