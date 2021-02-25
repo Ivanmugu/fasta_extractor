@@ -33,8 +33,9 @@ def user_input():
             To run this program you need a folder containing subfolders. Every
             subfolder should have a fasta file, and the fasta file can have one
             or more fasta sequences. For example, you can have a folder named
-            results containing the SW0001 and SW0002 assembly.fasta results as
-            follow:
+            results. In this case, results will be the input folder and will
+            contain the SW0001 and SW0002 assembly.fasta results as follows:
+
             results/
                 SW0001_n2759_L1000-/
                     assembly.fasta
@@ -52,6 +53,7 @@ def user_input():
             reached, the scripts continues with the next SW0002 subfolder.
 
             An example of possible results:
+
             results/
                 SW0001_n2759_L1000-/
                     assembly.fasta
@@ -280,7 +282,7 @@ def main():
     # a fasta file (file_name).
     screen_subfolders(file_name, input_folder)
     # If everything went OK print Done
-    print("Done!")
+    print("fasta_extractor is done!")
     sys.exit(0)
 
 
