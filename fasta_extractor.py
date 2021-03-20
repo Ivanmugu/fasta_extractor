@@ -2,11 +2,16 @@
 # -*- coding: utf-8 -*-
 
 """
-File name: fasta_extractor
-Author: Ivan Munoz-Gutierrez
-Date created: 02/10/2021
+File name:          fasta_extractor.py
+Author:             Ivan Munoz-Gutierrez
+Date created:       02/10/2021
 Date last modified: 03/17/2021
-Python version: 3.9
+Python version:     3.9
+Description:        Extract fasta sequences contained in fasta files. For more
+                    information refer to the epilog_msg in the user_input
+                    function.
+
+TODO: make an option to extract fasta sequences in a single folder.
 """
 
 import sys
