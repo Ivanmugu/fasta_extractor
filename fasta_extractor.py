@@ -5,13 +5,14 @@
 File name:          fasta_extractor.py
 Author:             Ivan Munoz-Gutierrez
 Date created:       02/10/2021
-Date last modified: 03/17/2021
+Date last modified: 03/27/2021
 Python version:     3.9
 Description:        Extract fasta sequences contained in fasta files. For more
                     information refer to the epilog_msg in the user_input
                     function.
 
-TODO: make an option to extract fasta sequences in a single folder.
+TODO: make an option to extract fasta sequences in a single folder. Make the
+      program more general.
 """
 
 import sys
@@ -24,27 +25,39 @@ def user_input():
     """
     Parse command line arguments provided by the user and check correct usage.
 
-    For example, if the user provides the following input:
+    Uses the module argparse to parse the command line arguments
 
-    python3 fasta_extractor.py -n assembly.fasta -i ~/Documents/results
-
-    The -n flag indicates that assembly.fasta is the name of the input file and
-    the -i flag indicates that ~/Documents/results is the path to the directory
-    that contains the input file. These information is saved and returned.
+    Parameters
+    ----------
+    --input, --output and --style
+        Command line arguments provided by the user.
 
     Returns
     -------
-    argparse object (.name, .input and .output)
-        .name : holds the name of the input fasta file.
-        .input : holds the path to the input directory.
-        .output : holds the path to the output directory.
+    argparse object (.input, .output and .style)
+        .input : list
+            If one argument is provided, the list contains one element which
+            is a path to a single fasta file requested for processing. If two
+            arguments are provided, the list contains two elements. The first
+            element is the path to an input directory that contains primary
+            subfolders for analysis. The second element is the name of the
+            fasta file that is contained in the primary subfolders and will be
+            processed.
+        .output : string
+            Holds the path to the output directory.
+        .style : string
+            Header style of the fasta(s) file(s) to be analyzed.
     """
     epilog_msg  = ("""
-    To run this program you need a folder containing subfolders. Every
-    subfolder should have a fasta file, and the fasta file can have one or more
-    fasta sequences. For example, you can have a folder named results. In this
-    case, results will be the input folder and contain the SW0001 and SW0002
-    assembly.fasta results as follows:
+    The program can process one or more fasta files. When only one fasta file
+    needs to be processed, the user should provide the path to the file. In the
+    case of multiple fasta files, the user should provide a path to a folder
+    containing subfolders with the fasta file that needs to be processed. For
+    example, the user can have a tree folder structure named results as shown
+    below. In this case, the path to the results folder is the input. As it can
+    be observed, the results folder contains two primary subfolders and every
+    primary subfolder contains the SW0001 and SW0002 assembly.fasta that would
+    be processed.
 
     ~/results/
         SW0001_n2759_L1000-/
@@ -52,24 +65,40 @@ def user_input():
         SW0002_n2770_L1000-/
             assembly.fasta
 
-    This script will search for assembly.fasta in the SW0001 subfolder and
+    If the path to the results folder from the above example is provided as
+    input, the program searches for assembly.fasta in the SW0001 subfolder and
     parse the fasta file. When a header is found, i.e. when a '>' symbol is
-    found, the fasta sequence will be extracted as an independent file. The new
-    fasta file will be named according to the name of the directory that
-    contains the fasta file. Header's information as length and topology will
-    be included in the fasta file name. The script will repeat the process
-    every time it finds a header. If the EOF is reached, the script will
-    continues with the next SW0002 subfolder. If the user doesn't provide an
-    output path, the new fasta files will be saved in the same folder that
-    contains the fasta file used for the extraction.
+    found, the fasta sequence will be extracted as an independent file. The
+    script will repeat the process every time it finds a header. When the EOF
+    is reached, the script continues with the next SW0002 subfolder. If the
+    user doesn't provide an output path, the new fasta files are saved in the
+    same folder that contains the fasta file used for the extraction.
 
-    Example of usage
+    This program parses two styles of fasta files, Unicycler and GeneBank. The
+    Unicycler style is characterized by providing the length and topology of
+    the molecule in the header, whereas GeneBank provides the accession number.
+    By default, this programs assumes that the provided fasta files are
+    Unicycler style. The user can specify the style by providing the
+    corresponding flag.
+
+    If the fasta file style is Unicycler, the new extracted fasta sequences are
+    named according to the name of the directory that contains the fasta file.
+    Additionally, header's information as length and topology are included in
+    the fasta file name. In the case of GeneBank style, the new extracted fasta
+    files are named according to the accession number present in the header.
+
+    Examples of usage
     ----------------
-    python3 fasta_extractor.py -n assembly.fasta -i ~/results
+    Example 1
+    Let's pretend the results folder shown above is the input. If we want to
+    get the extracted fasta files in the same folder as the provided
+    assembly.fasta, the user should type:
 
-    If we use the directory tree mentioned above as an example of input
-    folder, an hypothetical result, if the user doesn't provide an output path,
-    could be the following:
+    python3 fasta_extractor.py -i ~/results assembly.fasta
+
+    The input flag gets two arguments, the path to the results folder and the
+    name of the fasta files to be processed. An hypothetical result could be
+    the following:
 
     ~/results/
         SW0001_n2759_L1000-/
@@ -86,38 +115,125 @@ def user_input():
     replaced with underscore when naming the extracted fasta files (our lab
     adds a dash at the end of the folder's name). If the folder's name doesn't
     have a dash, the program will add an underscore anyway.
-    """)
 
-    # Parsing aguments and providing help.
+    Example 2
+    Let's use again the same results folder shown above as input. Now, if we
+    want the extracted fasta files in an specific folder named assemblies that
+    is in home the user should type:
+
+    python3 fasta_extractor.py -i ~/results assembly.fasta -o ~/assemblies
+
+    An hypothetical result could be the following:
+
+    ~/results/
+        SW0001_n2759_L1000-/
+            assembly.fasta
+        SW0002_n2770_L1000-/
+            assembly.fasta
+    ~/assemblies/
+        SW0001_n2759_L1000_4000000_circular.fasta
+        SW0001_n2759_L1000_100000_circular.fasta
+        SW0001_n2759_L1000_5000_circular.fasta
+        SW0002_n2770_L1000_3800000_linear.fasta
+        SW0002_n2770_L1000_125000_circular.fasta
+
+    Example 3
+    In case the user has only one fasta file for processing, the user should
+    provide the path to that file as follows:
+
+    python3 fasta_extractor.py -i ~/results/SW0001_n2759_L1000-/assembly.fasta
+
+    An hypothetical result could be the following:
+
+    ~/results/
+        SW0001_n2759_L1000-/
+            assembly.fasta
+            SW0001_n2759_L1000_4000000_circular.fasta
+            SW0001_n2759_L1000_100000_circular.fasta
+            SW0001_n2759_L1000_5000_circular.fasta
+
+    Example 4
+    If the user wants to extract multiple fasta sequences from a fasta file
+    named sequences.fasta created in GenBank, and the fasta file is in Desktop,
+    the user should type the following:
+
+    python3 fasta_extractor.py -i ~/Desktop/sequences.fasta -s genbank
+
+    To get the correcto output, the user must specify the style of the fasta
+    file. Therefore, the user must provide the -s flag with the genbank
+    argument. An hypothetical result could be the following:
+
+    ~/Desktop/
+        sequences.fasta
+        CP049609.1.fasta
+        CP049610.1.fasta
+        CP049611.1.fasta
+    """)
+    # Creating a parser object for parsing arguments and providing help.
     parser = argparse.ArgumentParser(
-        prog='fasta_extractor.py',
+        prog='python3 fasta_extractor.py',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
             "Extracts fasta sequences contained in a fasta file"),
         epilog=textwrap.dedent(epilog_msg))
-    parser.add_argument('-n', '--name', help="name of input fasta file")
-    parser.add_argument('-i', '--input', help="path to input directory")
-    parser.add_argument('-o', '--output', help="path to output directory")
+    # Creating required argument group.
+    mandatory_argument = parser.add_argument_group("required arguments")
+    # Making required argument.
+    mandatory_argument.add_argument(
+        '-i', '--input', required=True, nargs='+',
+        help=(
+            """
+            One or two arguments are required. If the user provides one
+            argument, the program will process one fasta file. Therefore, the
+            argument must be a path to the fasta file that needs to be
+            processed. If the user provides two arguments, the program will
+            process fasta files within primary subfolders. The fasta files to
+            be processed must have the same name. Therefore, in this option,
+            the first argument must give the path to the folder that contains
+            the primary subfolders to be analyzed, and the second argument is
+            the name of the fasta file contained in the primary subfolders that
+            the program will process.""")
+    )
+    # Making optional arguments.
+    parser.add_argument('-o', '--output', help="Path to output directory.")
+    parser.add_argument(
+        '-s', '--style',
+        help=(
+            """
+            Header style of the submitted fasta file (Unicycler or GenBank). If
+            style is Unicycler, type unicycler or u. If the style is GenBank
+            type genbank or g.""")
+    )
+    # Saving parsed arguments.
     args = parser.parse_args()
     # Checking if user provided mandatory arguments.
-    if (args.name is None) and (args.input is None):
+    if len(args.input) == 1 and (not os.path.exists(args.input[0])):
         parser.exit(1, message=textwrap.dedent("""\
-                error: missing arguments, you did not provide name of input
-                fasta file nor path to input folder\n"""))
-    if (vars(args)).get("name") is None:
+                Error: path to fasta file doesn't exist\n"""))
+    if len(args.input) == 1 and (os.path.isdir(args.input[0])):
         parser.exit(1, message=textwrap.dedent("""\
-                error: missing argument, you did not provide name of input
-                fasta file\n"""))
-    if (vars(args)).get("input") is None:
+                Error: the path provided is a directory not a fasta file\n"""))
+    if len(args.input) == 2 and (not os.path.exists(args.input[0])):
         parser.exit(1, message=textwrap.dedent("""\
-                error: missing argument, you did not provide path to input
-                folder\n"""))
-    # Checking if input folder exists.
-    if not os.path.exists(args.input):
-        parser.exit(1, message="error: input directory does not exits\n")
-    # Checking if output folder exists.
-    if (not (args.output is None)) and (not os.path.exists(args.output)):
-        parser.exit(1, message="error: output directory does not exits\n")
+                Error: path to input folder file doesn't exist\n"""))
+    if len(args.input) > 2:
+        parser.exit(1, message=textwrap.dedent("""\
+                Error: too many arguments\n"""))
+    # If output folder is provided, check if it exists.
+    if (args.output is not None) and (not os.path.exists(args.output)):
+        parser.exit(1, message="Error: output directory does not exits\n")
+    # If header style is provided check correct input.
+    if args.style is not None:
+        fasta_style = args.style.lower()
+        if not (fasta_style == "unicycler" or fasta_style == "u" 
+        or fasta_style == "genbank" or fasta_style == "g"):
+            parser.exit(1, message="Error: wrong submitted style\n")
+        # Standardizing name of header style
+        else:
+            if fasta_style == "unicycler" or fasta_style == "u":
+                args.style = "unicycler"
+            if fasta_style == "genbank" or fasta_style == "g":
+                args.style = "genbank"
 
     return args
 
@@ -176,63 +292,77 @@ def get_file_paths(file_name, input_folder):
 
     return file_addresses
 
-
-def header_extractor(header):
+def header_extractor(header, style):
     """
-    Parse a header of a fasta sequence to look for length and topology.
+    Parse a header of a fasta sequence to extract information.
 
-    This function was designed to parse headers of assembly.fasta files
-    returned by Unycicler.
+    If the style is unicycler, length and topology are extrated. If the style
+    is genbank, accession number is extracted.
 
     Parameters
     ----------
     header : string
         Header of fasta sequence.
+    style : string
+        style of fasta file, it could be Unycler or GenBank style.
 
     Returns
     -------
-    tuple (length, topology)
-        length : int
-        topology : string
+    header_info : string
+        If header style is unicycler, returns length and topology separated by
+        underscore. For example, 5000000_circular.
+        If header style is genbank, returns the accession number present in the
+        header. For example, CP029244.1.
     """
-    # Information needed.
-    length = ""
-    topology = ""
     # Spliting header into list.
     header = header.split(" ")
-    # Looping over header to get info.
-    for info in header:
-        if "length" in info:
-            info = info.split("=")
-            length = info[1]
-            length = length.replace('\n', '')
-        elif "circular" in info:
-            info = info.split("=")
-            topology = info[0]
-            topology = topology.replace('\n', '')
-        else:
-            continue
-    if topology == "":
-        topology = "linear"
+    if style == "unicycler" or style == None:
+        # Information needed.
+        length = ""
+        topology = ""
+        # Looping over header to get info.
+        for info in header:
+            if "length" in info:
+                info = info.split("=")
+                length = info[1]
+                length = length.replace('\n', '')
+            elif "circular" in info:
+                info = info.split("=")
+                topology = info[0]
+                topology = topology.replace('\n', '')
+            else:
+                continue
+        if topology == "":
+            topology = "linear"
+        header_info = length + '_' + topology
+    elif style == "genbank":
+        # Getting the accession number
+        header_info = header[0][1:]
+    else:
+        sys.exit("Error: wrong fasta header style.")
 
-    # Returning tupple with length and topology.
-    return (length, topology)
+    return header_info
 
 
-def fasta_extractor(input_file, output_folder=None):
+def fasta_extractor(input_file, header_style, output_folder):
     """
     Parse a fasta file to extract its fasta sequences.
 
     The extracted fasta sequences are saved into independent files and are
-    named according to the name of the directory that contains the input_file.
-    Additionally, the length and topology of the extracted fasta sequences are
-    included in their name. If the user doesn't specify the output_folder, the
-    new fasta files are outputed in the same directory where the input_file is
-    located.
+    named depending of the header style provided. If header style is unicycler,
+    new files are named according to the name of the directory that contains
+    the input_file. Additionally, the length and topology of the extracted
+    fasta sequences are included in their name. If the header style is genbank,
+    new files are named according to the accession number provided in the
+    header of each fasta sequence.
+
+    If the user doesn't specify the output_folder, the new fasta files are
+    outputed in the same directory where the input_file is located.
 
     For example, if we have a hypothetical fasta file that contains three fasta
-    sequences in the following path: ~/My_assembly/assembly.fasta. If we don't
-    specify the output_folder, a hypothetical output could be:
+    sequences in the following path: ~/My_assembly/assembly.fasta. If header
+    style is unicycler and if we don't specify the output_folder, a
+    hypothetical output could be:
 
     ~/My_assembly/
             assembly.fasta
@@ -244,6 +374,8 @@ def fasta_extractor(input_file, output_folder=None):
     ----------
     input_file : string
         Path to file to be opened for parsing.
+    header_style : string
+        Style of header that can be unicycler or genbank.
     output_folder : string
         Path to save the the new fasta files.
     """
@@ -251,34 +383,43 @@ def fasta_extractor(input_file, output_folder=None):
     path_infile = os.path.abspath(input_file)
     # Getting path to folder containing input file.
     path_infolder = os.path.dirname(path_infile)
+    # Getting name of folder containing input file.
+    folder_name = os.path.basename(path_infolder)
+    # If folder_name has a dash at its end, replace it with underscore (in our
+    # lab we add a dash at the end of folder name).
+    if folder_name[len(folder_name) - 1:] == '-':
+        folder_name = folder_name[: -1]
+        folder_name = folder_name + '_'
+    # If folder_name has underscore at its end, ignore.
+    elif folder_name[len(folder_name) - 1:] == '_':
+        pass
+    # Otherwise add underscore at its end.
+    else:
+        folder_name = folder_name + '_'
+
     # Getting path to output folder.
     if output_folder is None:
         path_output = path_infolder
     else:
         path_output = output_folder
-    # Getting name of folder containing input file.
-    folder_name = os.path.basename(path_infolder)
-    # Replacing dash at the end of folder name with underscore (in our lab we
-    # add a dash at the end of folder name).
-    if folder_name[len(folder_name) - 1:] == '-':
-        folder_name = folder_name[: -1]
-        folder_name = folder_name + '_'
-    else:
-        folder_name = folder_name + '_'
+
     # Opening input file.
     with open(input_file, "r") as infile:
         # Counter of fasta sequence.
         counter = 0
         # Iterating over infile.
         for line in infile:
-            # Checking if line is header.
+            # If line is the first header open a new fasta file for writing.
             if line[0] == '>' and counter == 0:
                 # Gettting information from header.
-                header = header_extractor(line)
-                # Making out file name and new fasta file header.
-                outfile_name = (
-                        folder_name + header[0] + '_' + header[1])
-                outfile_header = '>' + outfile_name + '\n'
+                header = header_extractor(line, header_style)
+                # Making file name and new fasta file header.
+                if header_style == "unicycler" or header_style is None:
+                    outfile_name = (folder_name + header)
+                    outfile_header = '>' + outfile_name + '\n'
+                if header_style == "genbank":
+                    outfile_name = header
+                    outfile_header = line
                 # Opening out file.
                 outfile = open(
                     path_output + '/' + outfile_name + ".fasta", 'w')
@@ -286,15 +427,20 @@ def fasta_extractor(input_file, output_folder=None):
                 outfile.write(outfile_header)
                 # Increasing counter.
                 counter += 1
-            elif line[0] == '>' and counter > 0:
+            # If line isn't the first header, close the previous fasta file and
+            # open a new one for writing.
+            if line[0] == '>' and counter > 0:
                 # Closing previous outfile.
                 outfile.close()
                 # Getting information of new header.
-                header = header_extractor(line)
-                # Making out file name and new fasta file header.
-                outfile_name = (
-                        folder_name + header[0] + '_' + header[1])
-                outfile_header = '>' + outfile_name + '\n'
+                header = header_extractor(line, header_style)
+                # Making file name and new fasta file header.
+                if header_style == "unicycler" or header_style is None:
+                    outfile_name = (folder_name + header)
+                    outfile_header = '>' + outfile_name + '\n'
+                if header_style == "genbank":
+                    outfile_name = header
+                    outfile_header = line
                 # Opening out file.
                 outfile = open(
                     path_output + '/' + outfile_name + ".fasta", 'w')
@@ -302,10 +448,13 @@ def fasta_extractor(input_file, output_folder=None):
                 outfile.write(outfile_header)
                 # Increase counter.
                 counter += 1
-            elif line[0] != '>' and counter > 0:
-                # Concatenate line into outfile.
+            # If line is not header concatene line into the opened fasta file.
+            # To make sure that line is comming from a fasta sequence, counter
+            # must be greaater than 0.
+            if line[0] != '>' and counter > 0:
                 outfile.write(line)
-        # Closing last outfile only if a file was created.
+        # Closing the last fasta file only if a file was created, i.e. if the 
+        # counter is greater than 0.
         if counter > 0:
             outfile.close()
 
@@ -314,18 +463,25 @@ def main():
     """Extract fasta sequences from fasta files."""
     # Getting user input.
     args = user_input()
-    # Getting fasta file name.
-    file_name = args.name
-    # Getting path to input directory.
-    input_folder = args.input
+    # Getting input information list.
+    input_info = args.input
     # Getting path to output directory.
     output_folder = args.output
-    # Getting a list of paths to the primary subdirectories that contain the
-    # requested fasta file.
-    input_path_list = get_file_paths(file_name, input_folder)
-    # Looping over the list of paths to extract fasta sequences.
-    for _, path in enumerate(input_path_list):
-        fasta_extractor(path, output_folder)
+    # Getting the header style of fasta file
+    header_style = args.style
+
+    # If user provided one argument in input, process the provided fasta file.
+    if len(input_info) == 1:
+        fasta_extractor(input_info[0], header_style, output_folder)
+    # Otherwise, process the fasta files in the primary subdirectories.
+    else:
+        # Getting a list of paths to the primary subdirectories that contains 
+        # the requested fasta file.
+        input_path_list = get_file_paths(input_info[1], input_info[0])
+        # Looping over the list of paths to extract fasta sequences.
+        for _, path in enumerate(input_path_list):
+            fasta_extractor(path, header_style, output_folder)
+
     print("fasta_extractor is done!")
     sys.exit(0)
 
